@@ -1,0 +1,1 @@
+python -m esptool --port COM7 erase_flash
