@@ -394,7 +394,7 @@ function getOptions()
       {
         size: 14,
         lineHeight: 14,        weight: "normal",
-        family: "Digi",
+        family: "Kode Mono",
         variant: "small-caps",
         color: "rgba(216, 211, 197, 0.85)"
       }
@@ -411,7 +411,7 @@ function getOptions()
         size: 14,
         lineHeight: 14,
         weight: "normal",
-        family: "Digi",
+        family: "Kode Mono",
         variant: "small-caps",
         color: "rgba(216, 211, 197, 0.85)"
       }
@@ -539,7 +539,7 @@ $(document).ready(function()
                     eta = new Date(left * 1000).toISOString().substr(11, 8);
 
                     updateProgress(parseFloat(x.runtime)/parseFloat(x.totaltime)*100);
-                    $('#state').html('<span class="glyphicon glyphicon-time" style="font-size: 22px; font-weight: normal"></span><span style="font-family: Digi; font-size: 40px;">' + eta + '</span>');
+                    $('#state').html('<span class="glyphicon glyphicon-time" style="font-size: 22px; font-weight: normal"></span><span style="font-family: Kode Mono; font-size: 40px;">' + eta + '</span>');
                     $('#target_temp').html(parseInt(x.target));
 
 
