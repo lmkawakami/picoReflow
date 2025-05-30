@@ -8,3 +8,6 @@ thumbs.db
 storage/profiles
 config.py
 .idea/*
+
+
+GUI_webserver/**
