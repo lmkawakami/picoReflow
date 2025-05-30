@@ -1,0 +1,1 @@
+mpr -d c9 -m . exec "import main"
