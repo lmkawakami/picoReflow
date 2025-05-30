@@ -4,6 +4,8 @@ from machine import Pin
 from microdot import Microdot, send_file
 from microdot.websocket import with_websocket
 import time
+from oven import Oven, Profile
+from ovenWatcher import OvenWatcher
 
 LED = Pin(15, Pin.OUT)    # create output pin on GPIO0
 
