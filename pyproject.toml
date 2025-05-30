@@ -1,0 +1,9 @@
+[project]
+name = "picoreflow"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "mpremote>=1.25.0",
+]
