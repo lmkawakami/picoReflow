@@ -1,77 +1,80 @@
-import threading,logging,json,time,datetime
+import asyncio
+import logging, json, datetime
 from oven import Oven
-log = logging.getLogger(__name__)
 
-class OvenWatcher(threading.Thread):
-    def __init__(self,oven):
+log = logging.getLogger(__name__)
+log.info("Initializing OvenWatcher")
+
+class OvenWatcher:
+    def __init__(self, oven):
         self.last_profile = None
         self.last_log = []
         self.started = None
         self.recording = False
         self.observers = []
-        threading.Thread.__init__(self)
-        self.daemon = True
         self.log_skip_counter = 0
 
         self.oven = oven
-        self.start()
+        # Schedule the watcher loop as an asyncio task.
+        asyncio.create_task(self.run_loop())
 
-    def run(self):
+    async def run_loop(self):
         while True:
             oven_state = self.oven.get_state()
-            
+
             if oven_state.get("state") == Oven.STATE_RUNNING:
-                if self.log_skip_counter==0:
+                if self.log_skip_counter == 0:
                     self.last_log.append(oven_state)
             else:
                 self.recording = False
-            self.notify_all(oven_state)
-            self.log_skip_counter = (self.log_skip_counter +1)%20
-            time.sleep(self.oven.time_step)
-    
-    def record(self, profile):
+
+            await self.notify_all(oven_state)
+
+            self.log_skip_counter = (self.log_skip_counter + 1) % 20
+            await asyncio.sleep(self.oven.time_step)
+
+    async def record(self, profile):
         self.last_profile = profile
         self.last_log = []
         self.started = datetime.datetime.now()
         self.recording = True
-        #we just turned on, add first state for nice graph
+        # Add first state for a nice graph.
         self.last_log.append(self.oven.get_state())
 
-    def add_observer(self,observer):
+    async def add_observer(self, observer):
+        # Send backlog to new observer
         if self.last_profile:
             p = {
                 "name": self.last_profile.name,
-                "data": self.last_profile.data, 
-                "type" : "profile"
+                "data": self.last_profile.data,
+                "type": "profile"
             }
         else:
             p = None
-        
+
         backlog = {
             'type': "backlog",
             'profile': p,
             'log': self.last_log,
-            #'started': self.started
+            # 'started': self.started  # uncomment if needed
         }
-        print(backlog)
         backlog_json = json.dumps(backlog)
         try:
-            print(backlog_json)
-            observer.send(backlog_json)
-        except:
-            log.error("Could not send backlog to new observer")
-        
+            await observer.send(backlog_json)
+        except Exception as e:
+            log.error("Could not send backlog to new observer: %s", e)
         self.observers.append(observer)
 
-    def notify_all(self,message):
+    async def notify_all(self, message):
         message_json = json.dumps(message)
-        log.debug("sending to %d clients: %s"%(len(self.observers),message_json))
-        for wsock in self.observers:
+        log.debug("sending to %d clients: %s", len(self.observers), message_json)
+        # Iterate over a copy of the observers list as it may change during iteration.
+        for wsock in self.observers.copy():
             if wsock:
                 try:
-                    wsock.send(message_json)
-                except:
-                    log.error("could not write to socket %s"%wsock)
+                    await wsock.send(message_json)
+                except Exception as e:
+                    log.error("could not write to socket %s: %s", wsock, e)
                     self.observers.remove(wsock)
             else:
                 self.observers.remove(wsock)

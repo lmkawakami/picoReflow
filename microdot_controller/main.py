@@ -1,3 +1,16 @@
+import logging
+try:
+    import config
+except:
+    print("Could not import config file.")
+    print("Copy config.py.EXAMPLE to config.py and adapt it for your setup.")
+    exit(1)
+
+log_level = config.log_level
+log_format = config.log_format
+print(f"Configging logging... Level: {log_level}, Format: {log_format}")
+logging.basicConfig(level=log_level, format=log_format)
+
 print("Microdot Controller is running...")
 from wifi_utils import connect_to_wifi
 from machine import Pin
@@ -6,6 +19,11 @@ from microdot.websocket import with_websocket
 import time
 from oven import Oven, Profile
 from ovenWatcher import OvenWatcher
+
+
+log = logging.getLogger("picoreflowd")
+log.info("Starting picoreflowd")
+print("🔥🔥🔥")
 
 LED = Pin(15, Pin.OUT)    # create output pin on GPIO0
 
@@ -30,10 +48,19 @@ async def public(request, path):
         return 'Not found', 404
     return send_file('public/' + path, max_age=86400)
 
-if connect_to_wifi():
-    print("Connected to WiFi")
-    app.run()
+# if connect_to_wifi():
+#     print("Connected to WiFi")
+#     app.run()
 
-# while True:
-#     LED.value(not LED.value())  # toggle the LED state
-#     time.sleep(0.1)             # wait for 500 milliseconds
+
+
+# import asyncio
+# from oven import Oven
+
+# async def main():
+#     oven = Oven(simulate=True)  # or False if using real sensors
+#     # The oven tasks are running in the background.
+#     while True:
+#         await asyncio.sleep(1)
+
+# asyncio.run(main())
