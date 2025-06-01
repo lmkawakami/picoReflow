@@ -12,27 +12,39 @@ print(f"Configging logging... Level: {log_level}, Format: {log_format}")
 logging.basicConfig(level=log_level, format=log_format)
 
 print("Microdot Controller is running...")
+
 from wifi_utils import connect_to_wifi
 from machine import Pin
-from microdot import Microdot, send_file
+from microdot import Microdot, send_file, redirect
 from microdot.websocket import with_websocket
 import time
+import ntptime
 from oven import Oven, Profile
 from ovenWatcher import OvenWatcher
 
 
 log = logging.getLogger("picoreflowd")
 log.info("Starting picoreflowd")
-print("🔥🔥🔥")
+
+log.debug("Connecting to WiFi...")
+connect_to_wifi()
+log.info("Connected to WiFi")
+
+log.debug("Synchronizing time with NTP server...")
+ntptime.settime()
+log.info("Time synchronized with NTP server")
 
 LED = Pin(15, Pin.OUT)    # create output pin on GPIO0
 
 
 app = Microdot()
+oven = Oven()
+ovenWatcher = OvenWatcher(oven)
 
 @app.route('/')
 async def index(request):
-    return 'Hello, world!'
+    # return 'Hello, world!'
+    return redirect('/public/index.html')
 
 @app.route('/status')
 @with_websocket
@@ -48,9 +60,9 @@ async def public(request, path):
         return 'Not found', 404
     return send_file('public/' + path, max_age=86400)
 
-# if connect_to_wifi():
-#     print("Connected to WiFi")
-#     app.run()
+if connect_to_wifi():
+    print("Connected to WiFi")
+    app.run()
 
 
 

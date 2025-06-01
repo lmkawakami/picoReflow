@@ -1,6 +1,7 @@
 import asyncio
 import logging, json, datetime
 from oven import Oven
+from timezone import BRT_TZ
 
 log = logging.getLogger(__name__)
 log.info("Initializing OvenWatcher")
@@ -36,7 +37,7 @@ class OvenWatcher:
     async def record(self, profile):
         self.last_profile = profile
         self.last_log = []
-        self.started = datetime.datetime.now()
+        self.started = datetime.datetime.now(BRT_TZ)
         self.recording = True
         # Add first state for a nice graph.
         self.last_log.append(self.oven.get_state())

@@ -5,6 +5,7 @@ import datetime
 import logging
 import json
 import config
+from timezone import BRT_TZ
 
 log = logging.getLogger(__name__)
 log.info("Initializing Oven")
@@ -74,7 +75,7 @@ class Oven:
 
     def reset(self):
         self.profile = None
-        self.start_time = datetime.datetime.now()
+        self.start_time = datetime.datetime.now(BRT_TZ)
         self.runtime = 0
         self.totaltime = 0
         self.target = 0
@@ -94,7 +95,7 @@ class Oven:
         self.profile = profile
         self.totaltime = profile.get_duration()
         self.state = Oven.STATE_RUNNING
-        self.start_time = datetime.datetime.now()
+        self.start_time = datetime.datetime.now(BRT_TZ)
         log.info("Starting")
 
     def abort_run(self):
@@ -111,7 +112,7 @@ class Oven:
                 if self.simulate:
                     self.runtime += 0.5
                 else:
-                    runtime_delta = (datetime.datetime.now() - self.start_time).total_seconds()
+                    runtime_delta = (datetime.datetime.now(BRT_TZ) - self.start_time).total_seconds()
                     self.runtime = runtime_delta
                 log.info("running at %.1f deg C (Target: %.1f), heat %.2f, cool %.2f, air %.2f, door %s (%.1fs/%.0f)" %
                          (self.temp_sensor.temperature, self.target, self.heat, self.cool, self.air, self.door, self.runtime, self.totaltime))
@@ -323,12 +324,12 @@ class PID:
         self.ki = ki
         self.kp = kp
         self.kd = kd
-        self.lastNow = datetime.datetime.now()
+        self.lastNow = datetime.datetime.now(BRT_TZ)
         self.iterm = 0
         self.lastErr = 0
 
     def compute(self, setpoint, ispoint):
-        now = datetime.datetime.now()
+        now = datetime.datetime.now(BRT_TZ)
         timeDelta = (now - self.lastNow).total_seconds()
         error = float(setpoint - ispoint)
         self.iterm += (error * timeDelta * self.ki)
