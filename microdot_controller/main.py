@@ -46,7 +46,7 @@ profile_path = script_dir+("/").join(["storage", "profiles"])
 @app.route('/')
 async def index(request):
     # return 'Hello, world!'
-    return redirect('/public/index.html')
+    return redirect('/picoreflow/index.html')
 
 @app.route('/status')
 @with_websocket
@@ -55,7 +55,7 @@ async def status(request, ws):
         message = await ws.receive()
         await ws.send(message)
 
-@app.route('/public/<path:path>')
+@app.route('/picoreflow/<path:path>')
 async def public(request, path):
     if '..' in path:
         # directory traversal is not allowed
