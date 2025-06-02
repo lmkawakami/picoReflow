@@ -1,4 +1,4 @@
-/* @font-face{
+@font-face{
     font-family: "Digi";
     src: url('/picoreflow/assets/fonts/digital-7-webfont.eot');
     src: local("Digital 7"),
@@ -12,7 +12,7 @@
     src: local("Tables"),
     url('/picoreflow/assets/fonts/tables.woff') format("woff"),
     url('/picoreflow/assets/fonts/tables.ttf') format("truetype");
-} */
+}
 
 body {
     background: #b9b6af;
@@ -83,7 +83,7 @@ body {
 
 .ds-num {
     width: 100px;
-    font-family: "Kode Mono";
+    font-family: "Digi";
     border-right: 1px solid #b9b6af;
     white-space: nowrap;
     text-shadow: 0 0 25px rgba(0, 0, 0, 1);
@@ -91,7 +91,7 @@ body {
 
 .ds-input {
     color: #d8d3c5;
-    font-family: "Kode Mono";
+    font-family: "Digi";
     font-size: 24px;
     text-shadow: 0 0 12px rgba(0, 0, 0, 1);
     background: #3F3E3A url('/picoreflow/assets/images/panel_bg.png') repeat;
@@ -113,7 +113,7 @@ body {
 }
 
 .ds-led {
-    font-family: "Source Code Pro";
+    font-family: "Tables";
     font-size: 38px;
     text-align: center;
     color: #1F1E1A;
@@ -224,7 +224,7 @@ body {
 
 .progress-bar {
     background-color: #75890c;
-    font-family: "Kode Mono";
+    font-family: "Digi";
     font-size: 16px;
 }
 
