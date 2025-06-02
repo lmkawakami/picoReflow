@@ -236,6 +236,7 @@ function runTaskSimulation()
 function abortTask()
 {
     var cmd = {"cmd": "STOP"};
+    console.log("Aborting task");
     ws_control.send(JSON.stringify(cmd));
 }
 
