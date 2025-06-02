@@ -14,13 +14,8 @@ log.info("Initializing Oven")
 sensor_available = True
 
 try:
-    import RPi.GPIO as GPIO
-    GPIO.setmode(GPIO.BCM)
-    GPIO.setwarnings(False)
-    GPIO.setup(config.gpio_heat, GPIO.OUT)
-    GPIO.setup(config.gpio_cool, GPIO.OUT)
-    GPIO.setup(config.gpio_air, GPIO.OUT)
-    GPIO.setup(config.gpio_door, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+    from machine import Pin
+    gpio_heat = Pin(config.gpio_heat, Pin.OUT)
 
     gpio_available = True
 except ImportError:
@@ -81,13 +76,16 @@ class Oven:
         last_temp = 0
         pid_value = 0
         while True:
+            print("            Oven loop running...")
             self.door = self.get_door_state()
 
+            print("            Oven state: %s" % self.state)
             if self.state == Oven.STATE_RUNNING:
                 if self.simulate:
                     self.runtime += 0.5
                 else:
                     runtime_delta = (datetime.datetime.now(BRT_TZ) - self.start_time).total_seconds()
+                    log.debug(f"   start_time: {self.start_time},  now: {datetime.datetime.now(BRT_TZ)}, runtime_delta: {runtime_delta}")
                     self.runtime = runtime_delta
                 log.info("running at %.1f deg C (Target: %.1f), heat %.2f, cool %.2f, air %.2f, door %s (%.1fs/%.0f)" %
                          (self.temp_sensor.temperature, self.target, self.heat, self.cool, self.air, self.door, self.runtime, self.totaltime))
@@ -130,41 +128,41 @@ class Oven:
             self.heat = 1.0
             if gpio_available:
                 if config.heater_invert:
-                    GPIO.output(config.gpio_heat, GPIO.LOW)
+                    gpio_heat.value(0)
                     # For blocking operations inside an async loop, consider using asyncio.sleep()
                     time.sleep(self.time_step * value)
-                    GPIO.output(config.gpio_heat, GPIO.HIGH)
+                    gpio_heat.value(1)
                 else:
-                    GPIO.output(config.gpio_heat, GPIO.HIGH)
+                    gpio_heat.value(1)
                     time.sleep(self.time_step * value)
-                    GPIO.output(config.gpio_heat, GPIO.LOW)
+                    gpio_heat.value(0)
         else:
             self.heat = 0.0
             if gpio_available:
                 if config.heater_invert:
-                    GPIO.output(config.gpio_heat, GPIO.HIGH)
+                    gpio_heat.value(1)
                 else:
-                    GPIO.output(config.gpio_heat, GPIO.LOW)
+                    gpio_heat.value(0)
 
     def set_cool(self, value):
         if value:
             self.cool = 1.0
-            if gpio_available:
-                GPIO.output(config.gpio_cool, GPIO.LOW)
+            # if gpio_available:
+            #     GPIO.output(config.gpio_cool, GPIO.LOW)
         else:
             self.cool = 0.0
-            if gpio_available:
-                GPIO.output(config.gpio_cool, GPIO.HIGH)
+            # if gpio_available:
+            #     GPIO.output(config.gpio_cool, GPIO.HIGH)
 
     def set_air(self, value):
         if value:
             self.air = 1.0
-            if gpio_available:
-                GPIO.output(config.gpio_air, GPIO.LOW)
+            # if gpio_available:
+            #     GPIO.output(config.gpio_air, GPIO.LOW)
         else:
             self.air = 0.0
-            if gpio_available:
-                GPIO.output(config.gpio_air, GPIO.HIGH)
+            # if gpio_available:
+            #     GPIO.output(config.gpio_air, GPIO.HIGH)
 
     def get_state(self):
         return {
@@ -180,10 +178,11 @@ class Oven:
         }
 
     def get_door_state(self):
-        if gpio_available:
-            return "OPEN" if GPIO.input(config.gpio_door) else "CLOSED"
-        else:
-            return "UNKNOWN"
+        # if gpio_available:
+        #     return "OPEN" if GPIO.input(config.gpio_door) else "CLOSED"
+        # else:
+        #     return "UNKNOWN"
+        return "CLOSED"
 
 
 class TempSensor:

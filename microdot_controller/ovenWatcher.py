@@ -21,6 +21,7 @@ class OvenWatcher:
 
     async def run_loop(self):
         while True:
+            log.debug("    OvenWatcher loop running...   ")
             oven_state = self.oven.get_state()
 
             if oven_state.get("state") == Oven.STATE_RUNNING:
@@ -43,6 +44,7 @@ class OvenWatcher:
         self.last_log.append(self.oven.get_state())
 
     async def add_observer(self, observer):
+        log.debug("OvenWatcher add_observer %s", observer)
         # Send backlog to new observer
         if self.last_profile:
             p = {
@@ -65,10 +67,10 @@ class OvenWatcher:
         except Exception as e:
             log.error("Could not send backlog to new observer: %s", e)
         self.observers.append(observer)
+        log.debug("OvenWatcher added observer %s, total observers: %d", observer, len(self.observers))
 
     async def notify_all(self, message):
         message_json = json.dumps(message)
-        log.debug("sending to %d clients: %s", len(self.observers), message_json)
         # Iterate over a copy of the observers list as it may change during iteration.
         for wsock in self.observers.copy():
             if wsock:

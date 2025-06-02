@@ -51,9 +51,15 @@ async def index(request):
 @app.route('/status')
 @with_websocket
 async def status(request, ws):
+    log.info("websocket (status) opened")
+    await ovenWatcher.add_observer(ws)
     while True:
-        message = await ws.receive()
-        await ws.send(message)
+        try:
+            message = await ws.receive()
+            await ws.send("Your message was: %r" % message)
+        except WebSocketError:
+            break
+    log.info("websocket (status) closed")
 
 @app.route('/picoreflow/<path:path>')
 async def public(request, path):
