@@ -14,7 +14,9 @@ import logging
 
 ### Logging
 log_level = logging.DEBUG
-log_format = '%(asctime)s %(levelname)s %(name)s: %(message)s'
+# log_format = '%(asctime)s %(levelname)s %(name)s: %(message)s'
+# log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+log_format = '%(asctime)s.%(msecs)03d | %(name)s | %(levelname)s | %(message)s'
 
 ### Server
 # listening_ip = "0.0.0.0"
