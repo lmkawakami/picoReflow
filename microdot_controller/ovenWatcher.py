@@ -10,7 +10,7 @@ log.info("Initializing OvenWatcher")
 class OvenWatcher:
     def __init__(self, oven: Oven):
         self.last_profile = None
-        self.last_log = []
+        self.past_states = []
         self.started = None
         self.recording = False
         self.observers = []
@@ -25,16 +25,11 @@ class OvenWatcher:
             log.debug("    OvenWatcher loop running...   ")
             oven_state = self.oven.get_state()
 
-            tags = {"stage": "get_state"}
-            # log.debug("Writing oven state to InfluxDB: %s", oven_state)
-            # # result = await self.influxdb.async_write(fields=oven_state, tags=tags)
-            # result = self.influxdb.write(fields=oven_state, tags=tags)
-            # log.debug("InfluxDB write result: %s", result)
-            self._write_influx(oven_state, tags={"stage": "get_state"})
+            self._write_influx(oven_state, tags={"stage": "adding_board_status"})
 
             if oven_state.get("state") == Oven.STATE_RUNNING:
                 if self.log_skip_counter == 0:
-                    self.last_log.append(oven_state)
+                    self.past_states.append(oven_state)
             else:
                 self.recording = False
 
@@ -45,11 +40,11 @@ class OvenWatcher:
 
     async def record(self, profile):
         self.last_profile = profile
-        self.last_log = []
+        self.past_states = []
         self.started = datetime.datetime.now(BRT_TZ)
         self.recording = True
         # Add first state for a nice graph.
-        self.last_log.append(self.oven.get_state())
+        self.past_states.append(self.oven.get_state())
 
     async def add_observer(self, observer):
         log.debug("OvenWatcher add_observer %s", observer)
@@ -66,7 +61,7 @@ class OvenWatcher:
         backlog = {
             'type': "backlog",
             'profile': p,
-            'log': self.last_log,
+            'log': self.past_states,
             # 'started': self.started  # uncomment if needed
         }
         backlog_json = json.dumps(backlog)
@@ -92,6 +87,7 @@ class OvenWatcher:
 
     def _write_influx(self, oven_state, tags={}):
         async def write_influx_and_log(oven_state, tags):
+            log.debug("Writing to InfluxDB: %s", oven_state)
             result = await self.influxdb.async_write(fields=oven_state, tags=tags)
             log.debug("InfluxDB write result: %s", result)
 

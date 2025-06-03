@@ -93,4 +93,4 @@ influxdb_api_token = "ifJmQfGoF0eaVQQCFNk7BnmUqtiSC1n4Q7YuGlggIvJiLW9cKBh0zMVw5v
 influxdb_organization = "danko"
 influxdb_bucket = "sandbox"
 # influxdb_instance_name = "development_fake_kiln"
-influxdb_instance_name = "my_test_kiln_gogogo"
+influxdb_instance_name = "my_test_kiln_go"

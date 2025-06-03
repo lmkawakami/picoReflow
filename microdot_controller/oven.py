@@ -7,6 +7,7 @@ import json
 import config
 from max31855 import MAX31855, MAX31855Error
 from timezone import BRT_TZ
+from device_status import get_board_temperature, get_disk_status, get_memory_status
 
 log = logging.getLogger(__name__)
 log.info("Initializing Oven")
@@ -165,7 +166,7 @@ class Oven:
             #     GPIO.output(config.gpio_air, GPIO.HIGH)
 
     def get_state(self):
-        return {
+        oven_state = {
             'runtime': self.runtime,
             'temperature': self.temp_sensor.temperature,
             'target': self.target,
@@ -176,6 +177,10 @@ class Oven:
             'totaltime': self.totaltime,
             'door': self.door
         }
+        oven_state["boardTemperature"] = get_board_temperature()
+        oven_state.update(get_disk_status())
+        oven_state.update(get_memory_status())
+        return oven_state
 
     def get_door_state(self):
         # if gpio_available:
