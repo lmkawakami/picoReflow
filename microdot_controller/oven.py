@@ -90,6 +90,8 @@ class Oven:
                     self.runtime = runtime_delta
                 log.info("running at %.1f deg C (Target: %.1f), heat %.2f, cool %.2f, air %.2f, door %s (%.1fs/%.0f)" %
                          (self.temp_sensor.temperature, self.target, self.heat, self.cool, self.air, self.door, self.runtime, self.totaltime))
+                log.debug(f" >>> Profile <<<  {self.profile}")
+                log.debug(f" >>> Runtime <<<  {self.runtime}")
                 self.target = self.profile.get_target_temperature(self.runtime) if self.profile else 0
                 pid_value = self.pid.compute(self.target, self.temp_sensor.temperature)
 
@@ -116,13 +118,22 @@ class Oven:
                 elif self.temp_sensor.temperature < 180:
                     self.set_air(True)
 
+                log.debug(f"+++ Debug_times +++ runtime: {self.runtime}, totaltime: {self.totaltime}")
                 if self.runtime >= self.totaltime and self.totaltime > 0:
+                    log.info("Profile finished, resetting oven")
                     self.reset()
 
             if pid_value > 0:
                 await asyncio.sleep(self.time_step * (1 - pid_value))
             else:
                 await asyncio.sleep(self.time_step)
+
+    # def is_profile_finished(self):
+    #     if self.state == Oven.STATE_RUNNING:
+    #         if self.runtime >= self.totaltime and self.totaltime > 0:
+    #             log.info("Profile finished, resetting oven")
+    #             return True
+    #     return False
 
     def set_heat(self, value):
         if value > 0:
@@ -180,6 +191,8 @@ class Oven:
         oven_state["boardTemperature"] = get_board_temperature()
         oven_state.update(get_disk_status())
         oven_state.update(get_memory_status())
+        pid_state = self.pid.state.to_dict() if (self.pid and self.pid.state) else {}
+        oven_state.update(pid_state)
         return oven_state
 
     def get_door_state(self):
@@ -280,14 +293,45 @@ class Profile:
             return False
 
     def get_target_temperature(self, time_val):
+        log.debug(f"=== entering get_target_temperature with time_val: {time_val} ===")
         if time_val > self.get_duration():
             return 0
         (prev_point, next_point) = self.get_surrounding_points(time_val)
+        if (prev_point is None) and (next_point is None):
+            log.debug("No surrounding points found, returning 0")
+            return 0
         incl = float(next_point[1] - prev_point[1]) / float(next_point[0] - prev_point[0])
         temp = prev_point[1] + (time_val - prev_point[0]) * incl
         return temp
 
+class PIDState:
+    def __init__(self, kp, kd, ki, err, dErr, iErr, pTerm, dTerm, iTerm, raw_out, bounded_out):
+        self.kp = kp
+        self.kd = kd
+        self.ki = ki
+        self.err = err
+        self.dErr = dErr
+        self.iErr = iErr
+        self.pTerm = pTerm
+        self.dTerm = dTerm
+        self.iTerm = iTerm
+        self.raw_out = raw_out
+        self.bounded_out = bounded_out
 
+    def to_dict(self):
+        return {
+            'kp': self.kp,
+            'kd': self.kd,
+            'ki': self.ki,
+            'err': self.err,
+            'dErr': self.dErr,
+            'iErr': self.iErr,
+            'pTerm': self.pTerm,
+            'dTerm': self.dTerm,
+            'iTerm': self.iTerm,
+            'raw_out': self.raw_out,
+            'bounded_out': self.bounded_out
+        }
 class PID:
     def __init__(self, ki=1, kp=1, kd=1):
         self.ki = ki
@@ -296,6 +340,8 @@ class PID:
         self.lastNow = datetime.datetime.now(BRT_TZ)
         self.iterm = 0
         self.lastErr = 0
+        self._iErr = 0
+        self.state: PIDState = None
 
     def compute(self, setpoint, ispoint):
         now = datetime.datetime.now(BRT_TZ)
@@ -303,9 +349,25 @@ class PID:
         error = float(setpoint - ispoint)
         self.iterm += (error * timeDelta * self.ki)
         self.iterm = sorted([-1, self.iterm, 1])[1]
+        self._iErr += error * timeDelta
         dErr = (error - self.lastErr) / timeDelta
-        output = self.kp * error + self.iterm + self.kd * dErr
+        pTerm = self.kp * error
+        dTerm = self.kd * dErr
+        output = pTerm + self.iterm + dTerm
         output = sorted([-1, output, 1])[1]
         self.lastErr = error
         self.lastNow = now
+        self.state = PIDState(
+            kp=self.kp,
+            kd=self.kd,
+            ki=self.ki,
+            err=error,
+            dErr=dErr,
+            iErr=self._iErr,
+            pTerm=pTerm,
+            dTerm=dTerm,
+            iTerm=self.iterm,
+            raw_out=self.kp * error + self._iErr * self.ki + self.kd * dErr,
+            bounded_out=output
+        )
         return output
