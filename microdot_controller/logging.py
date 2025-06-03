@@ -34,7 +34,7 @@ class LogRecord:
         self.levelname = _level_dict[level]
         self.message = message
         self.ct = time.time()
-        self.msecs = int((self.ct - int(self.ct)) * 1000)
+        self.msecs = time.ticks_ms()%1000
         self.asctime = None
 
 
