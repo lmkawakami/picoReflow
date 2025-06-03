@@ -1,7 +1,9 @@
 import requests
 import aiohttp
 from singleton import singleton
+from time_keeper import TimeKeeper
 
+time_keeper = TimeKeeper()
 
 @singleton
 class InfluxDB:
@@ -20,7 +22,11 @@ class InfluxDB:
         self.configured = True
 
 
-    def write(self, fields: dict, tags: dict, timestamp: int):
+    def write(self, fields: dict, tags: dict, timestamp: int=None):
+        if timestamp is None:
+            timestamp = time_keeper.get_epoch()
+        if not self.configured:
+            raise Exception("InfluxDB not configured. Call config() method first.")
         try:
             data = self._format_data(fields, tags, timestamp)
             response = requests.post(self.url, headers=self.headers, data=data, timeout=2)
@@ -30,7 +36,11 @@ class InfluxDB:
         except Exception as e:
             return False
 
-    async def async_write(self, fields: dict, tags: dict, timestamp: int):
+    async def async_write(self, fields: dict, tags: dict, timestamp: int=None):
+        if timestamp is None:
+            timestamp = time_keeper.get_epoch()
+        if not self.configured:
+            raise Exception("InfluxDB not configured. Call config() method first.")
         try:
             data = self._format_data(fields, tags, timestamp)
             async with aiohttp.ClientSession() as session:
@@ -44,7 +54,17 @@ class InfluxDB:
 
     @staticmethod
     def _format(dict_data: dict) -> str:
-        return ",".join(f'{k}={v}' for k, v in dict_data.items())
+        fields = []
+        for k, v in dict_data.items():
+            if isinstance(v, str):
+                # Wrap strings in double quotes
+                fields.append(f'{k}="{v}"')
+            elif isinstance(v, bool):
+                # Format booleans in lowercase
+                fields.append(f'{k}={"true" if v else "false"}')
+            else:
+                fields.append(f'{k}={v}')
+        return ",".join(fields)
 
     def _format_data(self, fields: dict, tags: dict, timestamp: int) -> str:
         tag_set = self._format(tags)
