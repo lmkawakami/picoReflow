@@ -21,6 +21,8 @@ import json
 import ntptime
 from oven import Oven, Profile
 from ovenWatcher import OvenWatcher
+from influxdb import InfluxDB
+
 
 
 log = logging.getLogger("picoreflowd")
@@ -40,8 +42,17 @@ LED = Pin(15, Pin.OUT)    # create output pin on GPIO0
 app = Microdot()
 oven = Oven()
 ovenWatcher = OvenWatcher(oven)
+influxDB = InfluxDB()
 script_dir = os.getcwd()
 profile_path = script_dir+("/").join(["storage", "profiles"])
+
+influxDB.config(
+    base_url=config.influxdb_base_url,
+    api_token=config.influxdb_api_token,
+    organization=config.influxdb_organization,
+    bucket=config.influxdb_bucket,
+    instance_name=config.influxdb_instance_name
+)
 
 @app.route('/')
 async def index(request):

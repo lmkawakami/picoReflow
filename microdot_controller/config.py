@@ -60,9 +60,13 @@ sensor_time_wait = 1
 #
 #   PID parameters
 
-pid_ki = 0.1  # Integration
-pid_kd = 0.4  # Derivative
-pid_kp = 0.5  # Proportional
+# pid_ki = 0.1  # Integration
+# pid_kd = 0.4  # Derivative
+# pid_kp = 0.5  # Proportional
+
+pid_ki = 0.00000001  # Integration
+pid_kd = 0.004  # Derivative
+pid_kp = 0.005  # Proportional
 
 
 ########################################################################
