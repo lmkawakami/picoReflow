@@ -87,6 +87,11 @@ def _(pd):
 
     firing_data_df  # Display the updated DataFrame
 
+
+
+
+    firing_data_df = firing_data_df[firing_data_df["relative_time"]>9800]
+    firing_data_df = firing_data_df[firing_data_df["relative_time"]<89100]
     return (firing_data_df,)
 
 
@@ -267,10 +272,10 @@ def _(SimulatedKiln, firing_data_df):
         (_, initial_duty, initial_temp), firing_data_gen = remove_first(firing_data_gen)
     
         # simulated_kiln = SimulatedKiln(
-        #     max_power=2000,
+        #     max_power=4000,
         #     ambient_temp=20,
-        #     heat_capacity=30000,
-        #     heat_loss=1.8,
+        #     heat_capacity=50000,
+        #     heat_loss=3.6,
         #     initial_temp=initial_temp,
         #     initial_duty=initial_duty
         # )
@@ -278,8 +283,8 @@ def _(SimulatedKiln, firing_data_df):
         simulated_kiln = SimulatedKiln(
             max_power=2000,
             ambient_temp=20,
-            heat_capacity=30000,
-            heat_loss=1.8,
+            heat_capacity=50000,
+            heat_loss=1,
             initial_temp=initial_temp,
             initial_duty=initial_duty
         )
