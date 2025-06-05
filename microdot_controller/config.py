@@ -68,7 +68,10 @@ sensor_time_wait = 1
 temperature_oversamples = 10 # Number of samples observed between each "sensor_time_wait"
 
 ### Number of samples to average for the temperature reading
-temperature_averaging_window = 10
+temperature_averaging_window = 30
+
+### Number of attempts to read the thermocouple before giving up
+sensor_retry_attempts = 5
 
 ########################################################################
 #
@@ -83,9 +86,9 @@ temperature_averaging_window = 10
 # pid_kp = 0.005  # Proportional
 
 
-pid_ki = 0.01  # Integration
-pid_kd = 5  # Derivative
-pid_kp = 0.2  # Proportional
+# pid_ki = 0.01  # Integration
+# pid_kd = 5  # Derivative
+# pid_kp = 0.2  # Proportional
 
 
 ########################################################################

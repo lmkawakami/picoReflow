@@ -4,6 +4,7 @@ from oven import Oven
 from timezone import BRT_TZ
 from influxdb import InfluxDB
 import config
+from pid_config import PIDConfig
 
 log = logging.getLogger(__name__)
 log.info("Initializing OvenWatcher")
@@ -28,9 +29,9 @@ class OvenWatcher:
 
             self._write_influx(oven_state, tags={
                 "stage": "adding_board_status",
-                "kp": config.pid_kp,
-                "ki": config.pid_ki,
-                "kd": config.pid_kd,
+                "kp": PIDConfig.pid_kp,
+                "ki": PIDConfig.pid_ki,
+                "kd": PIDConfig.pid_kd,
                 "kiln_name": config.kiln_name,
                 "state": self.oven.state,
                 "start_time": self.oven.start_time.isoformat()

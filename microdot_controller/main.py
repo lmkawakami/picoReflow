@@ -1,11 +1,7 @@
 import os
 import logging
-try:
-    import config
-except:
-    logging.error("Could not import config file.")
-    logging.error("Copy config.py.EXAMPLE to config.py and adapt it for your setup.")
-    exit(1)
+import config
+from pid_config import PIDConfig
 
 log_level = config.log_level
 log_format = config.log_format
@@ -64,6 +60,17 @@ async def index(request):
 @app.route('/health')
 async def index(request):
     return 'OK'
+
+@app.route('/parameters', methods=['GET', 'POST'])
+async def parameters(request):
+    if request.method == "GET":
+        return json.dumps(PIDConfig.get_pid_config())
+    elif request.method == "POST":
+        data = request.json
+        log.info("Received parameters: %s" % data) # Received parameters: {'coefficient': 'kp', 'value': '32'}
+        PIDConfig.set_config(name=data.get('coefficient'), value=float(data.get('value')))
+        return json.dumps({"status": "success", "message": "Parameters updated"})
+
 
 @app.route('/status')
 @with_websocket

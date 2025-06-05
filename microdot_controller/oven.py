@@ -5,6 +5,7 @@ import datetime
 import logging
 import json
 import config
+from pid_config import PIDConfig
 from max31855 import MAX31855, MAX31855Error
 from timezone import BRT_TZ
 from device_status import get_board_temperature, get_disk_status, get_memory_status
@@ -36,7 +37,8 @@ class Oven:
         self,
         time_step=config.sensor_time_wait,
         temperature_oversamples=config.temperature_oversamples,
-        temperature_averaging_window=config.temperature_averaging_window
+        temperature_averaging_window=config.temperature_averaging_window,
+        sensor_retry_attempts=config.sensor_retry_attempts
     ):
         self.time_step = time_step
         self.reset()
@@ -45,7 +47,8 @@ class Oven:
         self.temp_sensor = TempSensorReal(
             self.time_step,
             temperature_oversamples=temperature_oversamples,
-            temperature_averaging_window=temperature_averaging_window
+            temperature_averaging_window=temperature_averaging_window,
+            sensor_retry_attempts=sensor_retry_attempts
         )
         # Start tasks for the sensor and oven loop
         asyncio.create_task(self.temp_sensor.run())
@@ -69,7 +72,7 @@ class Oven:
         self.heat = 0.0
         self.cool = 0.0
         self.air = 0.0
-        self.pid = PID(ki=config.pid_ki, kd=config.pid_kd, kp=config.pid_kp)
+        self.pid = PID(ki=PIDConfig.pid_ki, kd=PIDConfig.pid_kd, kp=PIDConfig.pid_kp)
 
     def run_profile(self, profile):
         log.info("Running profile %s" % profile.name)
@@ -141,11 +144,18 @@ class Oven:
 
 
 class TempSensorReal:
-    def __init__(self, time_step, temperature_oversamples, temperature_averaging_window):
+    def __init__(
+        self,
+        time_step,
+        temperature_oversamples,
+        temperature_averaging_window,
+        sensor_retry_attempts,
+    ):
         self.temperature = 0
         self.time_step = time_step
         self.temperature_oversamples = temperature_oversamples
         self.temperature_averaging_window = temperature_averaging_window
+        self.sensor_retry_attempts = sensor_retry_attempts
         self.thermocouple = MAX31855(
             config.gpio_sensor_cs,
             config.gpio_sensor_clock,
@@ -155,14 +165,19 @@ class TempSensorReal:
             config.temp_scale
         )
         self.ring_buffer = RingBuffer(self.temperature_averaging_window)
+
     async def run(self):
         while True:
-            try:
-                self.ring_buffer.add(self.thermocouple.get())
-                self.temperature = self.ring_buffer.average()
-            except Exception as e:
-                log.exception("problem reading temp", exc_info=e)
-            await asyncio.sleep(self.time_step/self.temperature_oversamples)
+            for attempt in range(self.sensor_retry_attempts):
+                try:
+                    self.ring_buffer.add(self.thermocouple.get())
+                    self.temperature = self.ring_buffer.average()
+                    break  # Exit the retry loop if successful
+                except Exception as e:
+                    log.warning(f"Attempt {attempt + 1} failed to read temperature: {e}")
+                    if attempt == config.sensor_retry_attempts - 1:
+                        log.exception("Giving up on reading temperature after multiple attempts", exc_info=e)
+            await asyncio.sleep(self.time_step / self.temperature_oversamples)
 
 class Profile:
     def __init__(self, json_data):

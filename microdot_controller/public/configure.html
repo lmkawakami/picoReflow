@@ -1,13 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Configure Kiln PID parameters</title>
+    <title>PID config</title>
+    <link rel="icon" type="image/x-icon" href="https://lmkawakami.github.io/picoReflow/original_pico_reflow/public/assets/images/favicon.ico" crossorigin="anonymous">
     <style>
         html {
             zoom: 150%;
         }
+
         body {
             font-family: monospace;
             background-color: #302e2e;
@@ -17,6 +20,7 @@
             position: relative;
             min-height: 100vh;
         }
+
         button {
             background-color: #b9b9b9;
             color: rgb(0, 0, 0);
@@ -28,9 +32,11 @@
             margin: 15px auto 20px;
             padding: 10px 15px;
         }
+
         button:hover {
             background-color: #cacaca;
         }
+
         input[type="number"] {
             display: block;
             margin: 0 auto;
@@ -38,6 +44,7 @@
             height: 2em;
             text-align: center;
         }
+
         .coefficient-span {
             display: inline-block;
             vertical-align: top;
@@ -46,6 +53,7 @@
             border: 1px solid #fafafa;
             border-radius: 10px;
         }
+
         /* Visual alert styling */
         #alert {
             display: none;
@@ -59,8 +67,15 @@
             font-weight: bold;
             border-top: 2px solid #e60000;
         }
+
+        /* Highlight effect for changed parameter values */
+        .highlight {
+            background-color: rgb(83, 250, 83);
+            transition: background-color 2s ease;
+        }
     </style>
 </head>
+
 <body>
     <h1>Configure Kiln PID parameters</h1>
     <div>
@@ -87,68 +102,79 @@
     <div id="alert">Error: Unable to fetch parameters from the server.</div>
 
     <script>
-        // Fetch current parameter values on page load.
-        document.addEventListener('DOMContentLoaded', function() {
+        // Function to update a span value and highlight changes.
+        function updateSpanValue(spanId, newValue) {
+            var spanEl = document.getElementById(spanId);
+            var oldValue = spanEl.textContent;
+            if (oldValue !== String(newValue)) {
+                spanEl.textContent = newValue;
+                spanEl.classList.add('highlight');
+                setTimeout(function () {
+                    spanEl.classList.remove('highlight');
+                }, 1000);
+            }
+        }
+
+        // Refresh (GET) current parameters.
+        function refreshParameters() {
             fetch('/parameters')
-                .then(function(response) {
+                .then(function (response) {
                     if (!response.ok) {
                         throw new Error('Network response was not ok');
                     }
                     return response.json();
                 })
-                .then(function(data) {
+                .then(function (data) {
                     // Expected JSON format: { kp: 1.23, ki: 0.45, kd: 0.67 }
-                    document.getElementById('KP-spam').textContent = data.kp;
-                    document.getElementById('KI-spam').textContent = data.ki;
-                    document.getElementById('KD-spam').textContent = data.kd;
+                    updateSpanValue('KP-spam', data.kp);
+                    updateSpanValue('KI-spam', data.ki);
+                    updateSpanValue('KD-spam', data.kd);
                 })
-                .catch(function(error) {
+                .catch(function (error) {
                     console.error('Error fetching parameters: ', error);
-                    // Fall back to hardcoded values if needed.
-                    document.getElementById('KP-spam').textContent = "1.23";
-                    document.getElementById('KI-spam').textContent = "0.45";
-                    document.getElementById('KD-spam').textContent = "0.67";
                     // Display the visual alert for the error.
                     var alertEl = document.getElementById('alert');
                     alertEl.style.display = 'block';
                     alertEl.textContent = "Error fetching parameters: " + error.message;
                 });
+        }
+
+        // Initial fetch when the page loads.
+        document.addEventListener('DOMContentLoaded', function () {
+            refreshParameters();
         });
-        
+
         // Callback function for setting a coefficient.
         function setCoefficient(coefficient) {
-        // Get the input element by its id (e.g., "kp", "ki", or "kd").
             var inputEl = document.getElementById(coefficient);
             var value = inputEl.value;
-            
-        // Build the endpoint URL, e.g., "/set_kp".
-            var url = '/set_' + coefficient;
-            
-        // Send a POST request with a JSON body containing the value.
+            var url = '/parameters';
             fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ value: value })
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ coefficient: coefficient, value: value })
             })
-            .then(function(response) {
-            if (!response.ok) {
-                throw new Error('Failed to set ' + coefficient);
-            }
-            return response.text(); // or response.json() based on your API response.
+            .then(function (response) {
+                if (!response.ok) {
+                    throw new Error('Failed to set ' + coefficient);
+                }
+                return response.text();
             })
-            .then(function(data) {
-            console.log('Successfully set ' + coefficient + ':', data);
+            .then(function (data) {
+                console.log('Successfully set ' + coefficient + ':', data);
+                // Wait one second, then refresh parameters.
+                setTimeout(refreshParameters, 1000);
             })
-            .catch(function(error) {
-            console.error('Error setting ' + coefficient + ':', error);
-            // Optionally, display the error in the alert element.
-            var alertEl = document.getElementById('alert');
-            alertEl.style.display = 'block';
-            alertEl.textContent = "Error setting " + coefficient + ": " + error.message;
-        });
-    }
+            .catch(function (error) {
+                console.error('Error setting ' + coefficient + ':', error);
+                var alertEl = document.getElementById('alert');
+                alertEl.style.display = 'block';
+                alertEl.textContent = "Error setting " + coefficient + ": " + error.message;
+            });
+        }
     </script>
 </body>
+
 </html>
