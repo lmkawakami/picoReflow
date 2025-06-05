@@ -12,17 +12,20 @@ from device_status import get_board_temperature, get_disk_status, get_memory_sta
 log = logging.getLogger(__name__)
 log.info("Initializing Oven")
 
-sensor_available = True
+from machine import Pin, PWM
+gpio_heat = Pin(config.gpio_heat, Pin.OUT)
+pwm_heat = PWM(gpio_heat)
+pwm_heat.freq(60)
+pwm_heat.duty(0)  # Set initial duty cycle to 0
 
-try:
-    from machine import Pin
-    gpio_heat = Pin(config.gpio_heat, Pin.OUT)
-
-    gpio_available = True
-except ImportError:
-    log.warning("Could not initialize GPIOs, oven operation will only be simulated!")
-    gpio_available = False
-
+def set_heat_duty(value: float):
+    log.info("Setting heat duty to %.2f" % value)
+    value*=1023
+    if value < 0:
+        value = 0
+    elif value > 1023:
+        value = 1023
+    pwm_heat.duty(int(value))
 
 class Oven:
     STATE_IDLE = "IDLE"
@@ -33,16 +36,19 @@ class Oven:
         self.time_step = time_step
         self.reset()
         self.runtime = 0
-        # Initialize temperature sensor based on availability
-        if simulate:
-            self.temp_sensor = TempSensorSimulate(self, 0.5, self.time_step)
-        elif sensor_available:
-            self.temp_sensor = TempSensorReal(self.time_step)
-        else:
-            self.temp_sensor = TempSensorSimulate(self, self.time_step, self.time_step)
+
+        self.temp_sensor = TempSensorReal(self.time_step)
         # Start tasks for the sensor and oven loop
         asyncio.create_task(self.temp_sensor.run())
         asyncio.create_task(self.run())
+
+    @property
+    def heat(self):
+        return pwm_heat.duty()/1023
+
+    @heat.setter
+    def heat(self, value):
+        return set_heat_duty(value)
 
     def reset(self):
         self.profile = None
@@ -50,16 +56,11 @@ class Oven:
         self.runtime = 0
         self.totaltime = 0
         self.target = 0
-        self.door = self.get_door_state()
         self.state = Oven.STATE_IDLE
         self.heat = 0.0
         self.cool = 0.0
         self.air = 0.0
         self.pid = PID(ki=config.pid_ki, kd=config.pid_kd, kp=config.pid_kp)
-        # Reset actuators
-        self.set_heat(0)
-        self.set_cool(False)
-        self.set_air(False)
 
     def run_profile(self, profile):
         log.info("Running profile %s" % profile.name)
@@ -77,19 +78,14 @@ class Oven:
         last_temp = 0
         pid_value = 0
         while True:
-            print("            Oven loop running...")
-            self.door = self.get_door_state()
-
-            print("            Oven state: %s" % self.state)
             if self.state == Oven.STATE_RUNNING:
                 if self.simulate:
                     self.runtime += 0.5
                 else:
                     runtime_delta = (datetime.datetime.now(BRT_TZ) - self.start_time).total_seconds()
-                    log.debug(f"   start_time: {self.start_time},  now: {datetime.datetime.now(BRT_TZ)}, runtime_delta: {runtime_delta}")
                     self.runtime = runtime_delta
-                log.info("running at %.1f deg C (Target: %.1f), heat %.2f, cool %.2f, air %.2f, door %s (%.1fs/%.0f)" %
-                         (self.temp_sensor.temperature, self.target, self.heat, self.cool, self.air, self.door, self.runtime, self.totaltime))
+                log.info("running at %.1f deg C (Target: %.1f), heat %.2f, cool %.2f, air %.2f (%.1fs/%.0f)" %
+                         (self.temp_sensor.temperature, self.target, self.heat, self.cool, self.air, self.runtime, self.totaltime))
                 log.debug(f" >>> Profile <<<  {self.profile}")
                 log.debug(f" >>> Runtime <<<  {self.runtime}")
                 self.target = self.profile.get_target_temperature(self.runtime) if self.profile else 0
@@ -97,7 +93,6 @@ class Oven:
 
                 log.info("pid: %.3f" % pid_value)
 
-                self.set_cool(pid_value <= -1)
                 if pid_value > 0:
                     if last_temp == self.temp_sensor.temperature:
                         temperature_count += 1
@@ -111,70 +106,14 @@ class Oven:
 
                 last_temp = self.temp_sensor.temperature
 
-                self.set_heat(pid_value)
-
-                if self.temp_sensor.temperature > 200:
-                    self.set_air(False)
-                elif self.temp_sensor.temperature < 180:
-                    self.set_air(True)
+                self.heat = pid_value
 
                 log.debug(f"+++ Debug_times +++ runtime: {self.runtime}, totaltime: {self.totaltime}")
                 if self.runtime >= self.totaltime and self.totaltime > 0:
                     log.info("Profile finished, resetting oven")
                     self.reset()
 
-            if pid_value > 0:
-                await asyncio.sleep(self.time_step * (1 - pid_value))
-            else:
-                await asyncio.sleep(self.time_step)
-
-    # def is_profile_finished(self):
-    #     if self.state == Oven.STATE_RUNNING:
-    #         if self.runtime >= self.totaltime and self.totaltime > 0:
-    #             log.info("Profile finished, resetting oven")
-    #             return True
-    #     return False
-
-    def set_heat(self, value):
-        if value > 0:
-            self.heat = 1.0
-            if gpio_available:
-                if config.heater_invert:
-                    gpio_heat.value(0)
-                    # For blocking operations inside an async loop, consider using asyncio.sleep()
-                    time.sleep(self.time_step * value)
-                    gpio_heat.value(1)
-                else:
-                    gpio_heat.value(1)
-                    time.sleep(self.time_step * value)
-                    gpio_heat.value(0)
-        else:
-            self.heat = 0.0
-            if gpio_available:
-                if config.heater_invert:
-                    gpio_heat.value(1)
-                else:
-                    gpio_heat.value(0)
-
-    def set_cool(self, value):
-        if value:
-            self.cool = 1.0
-            # if gpio_available:
-            #     GPIO.output(config.gpio_cool, GPIO.LOW)
-        else:
-            self.cool = 0.0
-            # if gpio_available:
-            #     GPIO.output(config.gpio_cool, GPIO.HIGH)
-
-    def set_air(self, value):
-        if value:
-            self.air = 1.0
-            # if gpio_available:
-            #     GPIO.output(config.gpio_air, GPIO.LOW)
-        else:
-            self.air = 0.0
-            # if gpio_available:
-            #     GPIO.output(config.gpio_air, GPIO.HIGH)
+            await asyncio.sleep(self.time_step)
 
     def get_state(self):
         oven_state = {
@@ -186,7 +125,6 @@ class Oven:
             'cool': self.cool,
             'air': self.air,
             'totaltime': self.totaltime,
-            'door': self.door
         }
         oven_state["boardTemperature"] = get_board_temperature()
         oven_state.update(get_disk_status())
@@ -194,13 +132,6 @@ class Oven:
         pid_state = self.pid.state.to_dict() if (self.pid and self.pid.state) else {}
         oven_state.update(pid_state)
         return oven_state
-
-    def get_door_state(self):
-        # if gpio_available:
-        #     return "OPEN" if GPIO.input(config.gpio_door) else "CLOSED"
-        # else:
-        #     return "UNKNOWN"
-        return "CLOSED"
 
 
 class TempSensor:
@@ -231,40 +162,6 @@ class TempSensorReal(TempSensor):
             except Exception as e:
                 log.exception("problem reading temp", exc_info=e)
             await asyncio.sleep(self.time_step)
-
-
-class TempSensorSimulate(TempSensor):
-    def __init__(self, oven, time_step, sleep_time):
-        super().__init__(time_step)
-        self.oven = oven
-        self.sleep_time = sleep_time
-
-    async def run(self):
-        t_env      = config.sim_t_env
-        c_heat     = config.sim_c_heat
-        c_oven     = config.sim_c_oven
-        p_heat     = config.sim_p_heat
-        R_o_nocool = config.sim_R_o_nocool
-        R_o_cool   = config.sim_R_o_cool
-        R_ho_noair = config.sim_R_ho_noair
-        R_ho_air   = config.sim_R_ho_air
-
-        t = t_env   # Oven temperature
-        t_h = t     # Heat element temperature
-        while True:
-            Q_h = p_heat * self.time_step * self.oven.heat
-            t_h += Q_h / c_heat
-            R_ho = R_ho_air if self.oven.air else R_ho_noair
-            p_ho = (t_h - t) / R_ho
-            t   += p_ho * self.time_step / c_oven
-            t_h -= p_ho * self.time_step / c_heat
-            p_env = ((t - t_env) / R_o_cool) if self.oven.cool else ((t - t_env) / R_o_nocool)
-            t -= p_env * self.time_step / c_oven
-            log.debug("energy sim: -> %dW heater: %.0f -> %dW oven: %.0f -> %dW env" %
-                      (int(p_heat * self.oven.heat), t_h, int(p_ho), t, int(p_env)))
-            self.temperature = t
-            await asyncio.sleep(self.sleep_time)
-
 
 class Profile:
     def __init__(self, json_data):

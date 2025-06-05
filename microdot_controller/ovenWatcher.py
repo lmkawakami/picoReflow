@@ -3,6 +3,7 @@ import logging, json, datetime
 from oven import Oven
 from timezone import BRT_TZ
 from influxdb import InfluxDB
+import config
 
 log = logging.getLogger(__name__)
 log.info("Initializing OvenWatcher")
@@ -25,7 +26,15 @@ class OvenWatcher:
             log.debug("    OvenWatcher loop running...   ")
             oven_state = self.oven.get_state()
 
-            self._write_influx(oven_state, tags={"stage": "adding_board_status"})
+            self._write_influx(oven_state, tags={
+                "stage": "adding_board_status",
+                "kp": config.pid_kp,
+                "ki": config.pid_ki,
+                "kd": config.pid_kd,
+                "kiln_name": config.kiln_name,
+                "state": self.oven.state,
+                "start_time": self.oven.start_time.isoformat()
+            })
 
             if oven_state.get("state") == Oven.STATE_RUNNING:
                 if self.log_skip_counter == 0:
@@ -41,7 +50,7 @@ class OvenWatcher:
     async def record(self, profile):
         self.last_profile = profile
         self.past_states = []
-        self.started = datetime.datetime.now(BRT_TZ)
+        self.started = datetime.datetime.now(BRT_TZ).isoformat()
         self.recording = True
         # Add first state for a nice graph.
         self.past_states.append(self.oven.get_state())
@@ -87,7 +96,7 @@ class OvenWatcher:
 
     def _write_influx(self, oven_state, tags={}):
         async def write_influx_and_log(oven_state, tags):
-            log.debug("Writing to InfluxDB: %s", oven_state)
+            # log.debug("Writing to InfluxDB: %s", oven_state)
             result = await self.influxdb.async_write(fields=oven_state, tags=tags)
             log.debug("InfluxDB write result: %s", result)
 
