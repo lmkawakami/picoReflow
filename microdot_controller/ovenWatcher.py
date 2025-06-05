@@ -40,12 +40,13 @@ class OvenWatcher:
             if oven_state.get("state") == Oven.STATE_RUNNING:
                 if self.log_skip_counter == 0:
                     self.past_states.append(oven_state)
+                    log.debug(">>>>> Saving state to past_states: %s", oven_state)
             else:
                 self.recording = False
 
             await self.notify_all(oven_state)
 
-            self.log_skip_counter = (self.log_skip_counter + 1) % 20
+            self.log_skip_counter = (self.log_skip_counter + 1) % self.oven.backlog_undersampling_factor
             await asyncio.sleep(self.oven.time_step)
 
     async def record(self, profile):

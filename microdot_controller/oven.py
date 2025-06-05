@@ -12,13 +12,15 @@ from device_status import get_board_temperature, get_disk_status, get_memory_sta
 from ring_buffer import RingBuffer
 from influxdb import InfluxDB
 
+DEFAULT_BACKLOG_UNDERSAMPLING_FACTOR = 20  # Default value for the backlog undersampling factor
+
 log = logging.getLogger(__name__)
 log.info("Initializing Oven")
 
 from machine import Pin, PWM
 gpio_heat = Pin(config.gpio_heat, Pin.OUT)
 pwm_heat = PWM(gpio_heat)
-pwm_heat.freq(60)
+pwm_heat.freq(65)
 pwm_heat.duty(0)  # Set initial duty cycle to 0
 
 def set_heat_duty(value: float):
@@ -44,6 +46,7 @@ class Oven:
         self.time_step = time_step
         self.reset()
         self.runtime = 0
+        self.backlog_undersampling_factor = DEFAULT_BACKLOG_UNDERSAMPLING_FACTOR
 
         self.temp_sensor = TempSensorReal(
             self.time_step,
@@ -74,13 +77,15 @@ class Oven:
         self.cool = 0.0
         self.air = 0.0
         self.pid = PID(ki=pid_config.pid_ki, kd=pid_config.pid_kd, kp=pid_config.pid_kp)
+        self.backlog_undersampling_factor = DEFAULT_BACKLOG_UNDERSAMPLING_FACTOR
 
-    def run_profile(self, profile):
+    def run_profile(self, profile, backlog_undersampling_factor):
         log.info("Running profile %s" % profile.name)
         self.profile = profile
         self.totaltime = profile.get_duration()
         self.state = Oven.STATE_RUNNING
         self.start_time = datetime.datetime.now(BRT_TZ)
+        self.backlog_undersampling_factor = backlog_undersampling_factor
         log.info("Starting")
 
     def abort_run(self):

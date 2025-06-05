@@ -107,7 +107,12 @@ async def control(request, ws):
                 if profile_obj:
                     profile_json = json.dumps(profile_obj)
                     profile = Profile(profile_json)
-                oven.run_profile(profile)
+                expected_observations = profile.get_duration() / oven.time_step
+                backlog_undersampling_factor = int(expected_observations/100)+1
+                log.debug(f"Expected observations: {expected_observations}")
+                log.debug(f"Backlog undersampling factor: {backlog_undersampling_factor}")
+                log.debug(f"Expected to observe every {oven.time_step * backlog_undersampling_factor} seconds") 
+                oven.run_profile(profile, backlog_undersampling_factor)
                 ovenWatcher.record(profile)
             elif msgdict.get("cmd") == "STOP":
                 log.info("Stop command received")
