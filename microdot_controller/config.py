@@ -64,6 +64,11 @@ spi_sensor_chip_id = 0
 sensor_time_wait = 1
 # sensor_time_wait = 5
 
+## Temperature oversampling rate to get more stable readings
+temperature_oversamples = 10 # Number of samples observed between each "sensor_time_wait"
+
+### Number of samples to average for the temperature reading
+temperature_averaging_window = 10
 
 ########################################################################
 #

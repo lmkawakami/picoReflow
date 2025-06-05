@@ -8,6 +8,7 @@ import config
 from max31855 import MAX31855, MAX31855Error
 from timezone import BRT_TZ
 from device_status import get_board_temperature, get_disk_status, get_memory_status
+from ring_buffer import RingBuffer
 
 log = logging.getLogger(__name__)
 log.info("Initializing Oven")
@@ -31,13 +32,21 @@ class Oven:
     STATE_IDLE = "IDLE"
     STATE_RUNNING = "RUNNING"
 
-    def __init__(self, simulate=False, time_step=config.sensor_time_wait):
-        self.simulate = simulate
+    def __init__(
+        self,
+        time_step=config.sensor_time_wait,
+        temperature_oversamples=config.temperature_oversamples,
+        temperature_averaging_window=config.temperature_averaging_window
+    ):
         self.time_step = time_step
         self.reset()
         self.runtime = 0
 
-        self.temp_sensor = TempSensorReal(self.time_step)
+        self.temp_sensor = TempSensorReal(
+            self.time_step,
+            temperature_oversamples=temperature_oversamples,
+            temperature_averaging_window=temperature_averaging_window
+        )
         # Start tasks for the sensor and oven loop
         asyncio.create_task(self.temp_sensor.run())
         asyncio.create_task(self.run())
@@ -79,11 +88,8 @@ class Oven:
         pid_value = 0
         while True:
             if self.state == Oven.STATE_RUNNING:
-                if self.simulate:
-                    self.runtime += 0.5
-                else:
-                    runtime_delta = (datetime.datetime.now(BRT_TZ) - self.start_time).total_seconds()
-                    self.runtime = runtime_delta
+                runtime_delta = (datetime.datetime.now(BRT_TZ) - self.start_time).total_seconds()
+                self.runtime = runtime_delta
                 log.info("running at %.1f deg C (Target: %.1f), heat %.2f, cool %.2f, air %.2f (%.1fs/%.0f)" %
                          (self.temp_sensor.temperature, self.target, self.heat, self.cool, self.air, self.runtime, self.totaltime))
                 log.debug(f" >>> Profile <<<  {self.profile}")
@@ -134,19 +140,12 @@ class Oven:
         return oven_state
 
 
-class TempSensor:
-    def __init__(self, time_step):
+class TempSensorReal:
+    def __init__(self, time_step, temperature_oversamples, temperature_averaging_window):
         self.temperature = 0
         self.time_step = time_step
-
-    async def run(self):
-        # To be implemented by subclasses
-        pass
-
-
-class TempSensorReal(TempSensor):
-    def __init__(self, time_step):
-        super().__init__(time_step)
+        self.temperature_oversamples = temperature_oversamples
+        self.temperature_averaging_window = temperature_averaging_window
         self.thermocouple = MAX31855(
             config.gpio_sensor_cs,
             config.gpio_sensor_clock,
@@ -155,13 +154,15 @@ class TempSensorReal(TempSensor):
             config.gpio_thermocouple_gnd,
             config.temp_scale
         )
+        self.ring_buffer = RingBuffer(self.temperature_averaging_window)
     async def run(self):
         while True:
             try:
-                self.temperature = self.thermocouple.get()
+                self.ring_buffer.add(self.thermocouple.get())
+                self.temperature = self.ring_buffer.average()
             except Exception as e:
                 log.exception("problem reading temp", exc_info=e)
-            await asyncio.sleep(self.time_step)
+            await asyncio.sleep(self.time_step/self.temperature_oversamples)
 
 class Profile:
     def __init__(self, json_data):
