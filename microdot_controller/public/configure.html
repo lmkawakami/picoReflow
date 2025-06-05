@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Configure Kiln PID parameters</title>
     <style>
         html {
             zoom: 150%;
@@ -14,9 +14,10 @@
             color: #fafafa;
             padding: 20px;
             text-align: center;
+            position: relative;
+            min-height: 100vh;
         }
         button {
-            padding: 10px 15px;
             background-color: #b9b9b9;
             color: rgb(0, 0, 0);
             font-weight: bold;
@@ -24,7 +25,8 @@
             border-radius: 5px;
             cursor: pointer;
             display: block;
-            margin: 15px auto 20px; /* 10px on top and bottom */
+            margin: 15px auto 20px;
+            padding: 10px 15px;
         }
         button:hover {
             background-color: #cacaca;
@@ -34,7 +36,7 @@
             margin: 0 auto;
             width: 50%;
             height: 2em;
-            text-align: center;  /* center the text inside the input */
+            text-align: center;
         }
         .coefficient-span {
             display: inline-block;
@@ -43,6 +45,19 @@
             padding: 10px;
             border: 1px solid #fafafa;
             border-radius: 10px;
+        }
+        /* Visual alert styling */
+        #alert {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #ff4d4d;
+            color: #000;
+            padding: 10px;
+            font-weight: bold;
+            border-top: 2px solid #e60000;
         }
     </style>
 </head>
@@ -68,5 +83,38 @@
             <button>Set KD</button>
         </span>
     </div>
+    <!-- Visual alert element -->
+    <div id="alert">Error: Unable to fetch parameters from the server.</div>
+
+    <script>
+        // This function runs when the DOM is ready.
+        document.addEventListener('DOMContentLoaded', function() {
+            // Make a GET request to /parameters to fetch the current PID values.
+            fetch('/parameters')
+                .then(function(response) {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(function(data) {
+                    // Expected JSON format: { kp: 1.23, ki: 0.45, kd: 0.67 }
+                    document.getElementById('KP-spam').textContent = data.kp;
+                    document.getElementById('KI-spam').textContent = data.ki;
+                    document.getElementById('KD-spam').textContent = data.kd;
+                })
+                .catch(function(error) {
+                    console.error('Error fetching parameters: ', error);
+                    // Fall back to hardcoded values if needed.
+                    document.getElementById('KP-spam').textContent = "1.23";
+                    document.getElementById('KI-spam').textContent = "0.45";
+                    document.getElementById('KD-spam').textContent = "0.67";
+                    // Display the visual alert for the error.
+                    var alertEl = document.getElementById('alert');
+                    alertEl.style.display = 'block';
+                    alertEl.textContent = "Error fetching parameters: " + error.message;
+                });
+        });
+    </script>
 </body>
 </html>
