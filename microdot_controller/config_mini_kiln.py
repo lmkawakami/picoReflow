@@ -13,7 +13,7 @@ import logging
 #   General options
 
 
-kiln_name = "mockup_kiln"
+kiln_name = "mini_test_kiln"
 
 ### Logging
 log_level = logging.DEBUG
