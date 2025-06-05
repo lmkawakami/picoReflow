@@ -220,6 +220,8 @@ class TempSensorReal(TempSensor):
             config.gpio_sensor_cs,
             config.gpio_sensor_clock,
             config.gpio_sensor_data,
+            config.gpio_thermocouple_vdd,
+            config.gpio_thermocouple_gnd,
             config.temp_scale
         )
     async def run(self):

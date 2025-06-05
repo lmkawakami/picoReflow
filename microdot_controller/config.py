@@ -5,7 +5,7 @@ GATEWAY_IP = "192.168.0.1"
 DEVICE_IP = "192.168.0.25"
 
 
-
+from machine import Pin
 import logging
 
 ########################################################################
@@ -36,7 +36,9 @@ currency_type   = "EUR"   # Currency Symbol to show when calculating cost to run
 #   can use whichever GPIO you prefer/have available.
 
 ### Outputs
-gpio_heat = 11  # Switches zero-cross solid-state-relay
+gpio_heat = 40  # Switches zero-cross solid-state-relay
+gpio_heat_gnd = 39
+Pin(gpio_heat_gnd, Pin.OUT).off()  # Set the ground pin for the heater to low
 gpio_cool = 10  # Regulates PWM for 12V DC Blower
 gpio_air  = 9   # Switches 0-phase det. solid-state-relay
 
@@ -46,9 +48,11 @@ heater_invert = 0 # switches the polarity of the heater control
 gpio_door = 18
 
 ### Thermocouple SPI Connection
-gpio_sensor_clock = 3
-gpio_sensor_cs = 5
-gpio_sensor_data = 7
+gpio_sensor_clock = 10
+gpio_sensor_cs = 9
+gpio_sensor_data = 8
+gpio_thermocouple_vdd = 6
+gpio_thermocouple_gnd = 7
 
 ### Thermocouple SPI Connection (using adafrut drivers + kernel SPI interface)
 spi_sensor_chip_id = 0
@@ -66,9 +70,14 @@ sensor_time_wait = 1
 # pid_kd = 0.4  # Derivative
 # pid_kp = 0.5  # Proportional
 
-pid_ki = 0.00000001  # Integration
-pid_kd = 0.004  # Derivative
-pid_kp = 0.005  # Proportional
+# pid_ki = 0.00000001  # Integration
+# pid_kd = 0.004  # Derivative
+# pid_kp = 0.005  # Proportional
+
+
+pid_ki = 0  # Integration
+pid_kd = 0  # Derivative
+pid_kp = 1  # Proportional
 
 
 ########################################################################

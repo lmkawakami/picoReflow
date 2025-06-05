@@ -1,13 +1,8 @@
 from machine import Pin, SoftSPI
 import math
+import time
 
-UNSET = 99
-D_3V3_PIN = UNSET
-D_GND_PIN = UNSET
-D_DO_PIN = 7# MISO / DO
-D_CS_PIN = 5 # CHIP_SELECT
-D_CLK_PIN = 3 # CLK / SCK
-D_MOSI_PIN = 9 # NOT_CONNECTED / MOSI
+D_MOSI_PIN = 15 # NOT_CONNECTED / MOSI / BOARD_LED
 
 
 class RawTemperatures:
@@ -44,19 +39,21 @@ class ThermocoupleError(Exception):
 class Thermocouple:
     def __init__(
         self,
-        d_3v3_pin=D_3V3_PIN,
-        d_gnd_pin=D_GND_PIN,
-        d_do_pin=D_DO_PIN,
-        d_cs_pin=D_CS_PIN,
-        d_clk_pin=D_CLK_PIN,
-        d_mosi_pin=D_MOSI_PIN
+        d_do_pin,
+        d_cs_pin,
+        d_clk_pin,
+        d_mosi_pin=D_MOSI_PIN,
+        d_3v3_pin=None,
+        d_gnd_pin=None,
     ) -> None:
         print("           Initializing Thermocouple...")
-        if d_3v3_pin != UNSET:
+        if not d_3v3_pin is None:
+            print("           Setting up 3.3V pin...")
             d_3v3 = Pin(d_3v3_pin, Pin.OUT)
             d_3v3.on()
 
-        if d_gnd_pin != UNSET:
+        if not d_gnd_pin is None:
+            print("           Setting up GND pin...")
             d_gnd = Pin(d_gnd_pin, Pin.OUT)
             d_gnd.off()
 
@@ -67,6 +64,7 @@ class Thermocouple:
         self.spi = SoftSPI(baudrate=100000, polarity=1, phase=0, sck=Pin(d_clk_pin), mosi=Pin(d_mosi_pin), miso=Pin(d_do_pin))
         self.spi.init(baudrate=100000) # set the baudrate
         self.chip_select.on()
+        time.sleep(1)
 
     def read_temps(self) -> RawTemperatures:
         self.chip_select.off()
@@ -218,7 +216,7 @@ class Thermocouple:
 
 
 class MAX31855:
-    def __init__(self, cs_pin, clock_pin, data_pin, units = "c"):
+    def __init__(self, cs_pin, clock_pin, data_pin, d_3v3_pin=None, d_gnd_pin=None, units = "c"):
         '''Initialize Soft (Bitbang) SPI bus
 
         Parameters:
@@ -231,7 +229,9 @@ class MAX31855:
         self.thermocouple = Thermocouple(
             d_cs_pin=cs_pin,
             d_clk_pin=clock_pin,
-            d_do_pin=data_pin
+            d_do_pin=data_pin,
+            d_3v3_pin=d_3v3_pin,
+            d_gnd_pin=d_gnd_pin,
         )
         self.units = units.lower()
         self.data: CompensatedTemperatures
