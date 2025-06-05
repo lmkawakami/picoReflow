@@ -1,7 +1,7 @@
 import os
 import logging
 import config
-from pid_config import PIDConfig
+from pid_config import pid_config
 
 log_level = config.log_level
 log_format = config.log_format
@@ -64,11 +64,11 @@ async def index(request):
 @app.route('/parameters', methods=['GET', 'POST'])
 async def parameters(request):
     if request.method == "GET":
-        return json.dumps(PIDConfig.get_pid_config())
+        return json.dumps(pid_config.get_pid_config())
     elif request.method == "POST":
         data = request.json
         log.info("Received parameters: %s" % data) # Received parameters: {'coefficient': 'kp', 'value': '32'}
-        PIDConfig.set_config(name=data.get('coefficient'), value=float(data.get('value')))
+        pid_config.set_config(name=data.get('coefficient'), value=float(data.get('value')))
         return json.dumps({"status": "success", "message": "Parameters updated"})
 
 

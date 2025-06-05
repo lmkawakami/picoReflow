@@ -5,11 +5,12 @@ import datetime
 import logging
 import json
 import config
-from pid_config import PIDConfig
+from pid_config import pid_config
 from max31855 import MAX31855, MAX31855Error
 from timezone import BRT_TZ
 from device_status import get_board_temperature, get_disk_status, get_memory_status
 from ring_buffer import RingBuffer
+from influxdb import InfluxDB
 
 log = logging.getLogger(__name__)
 log.info("Initializing Oven")
@@ -72,7 +73,7 @@ class Oven:
         self.heat = 0.0
         self.cool = 0.0
         self.air = 0.0
-        self.pid = PID(ki=PIDConfig.pid_ki, kd=PIDConfig.pid_kd, kp=PIDConfig.pid_kp)
+        self.pid = PID(ki=pid_config.pid_ki, kd=pid_config.pid_kd, kp=pid_config.pid_kp)
 
     def run_profile(self, profile):
         log.info("Running profile %s" % profile.name)
@@ -165,6 +166,7 @@ class TempSensorReal:
             config.temp_scale
         )
         self.ring_buffer = RingBuffer(self.temperature_averaging_window)
+        self.influxdb = InfluxDB()
 
     async def run(self):
         while True:
@@ -177,6 +179,11 @@ class TempSensorReal:
                     log.warning(f"Attempt {attempt + 1} failed to read temperature: {e}")
                     if attempt == config.sensor_retry_attempts - 1:
                         log.exception("Giving up on reading temperature after multiple attempts", exc_info=e)
+                if attempt == self.sensor_retry_attempts - 1:
+                    self.influxdb.fire_write(
+                        {"temperature_read_error": 1},
+                        {"retry_attempts": self.sensor_retry_attempts},
+                    )
             await asyncio.sleep(self.time_step / self.temperature_oversamples)
 
 class Profile:

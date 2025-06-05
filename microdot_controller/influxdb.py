@@ -1,5 +1,6 @@
 import requests
 import aiohttp
+import asyncio
 from singleton import singleton
 from time_keeper import TimeKeeper
 
@@ -51,6 +52,12 @@ class InfluxDB:
                     return True
         except Exception as e:
             return False
+
+    # a good name fot the method that will write data to influxdb triggering an async write but not waiting for the result. It should nor be "async_write" or "write_async".
+    def fire_write(self, fields: dict, tags: dict, timestamp: int=None):
+        asyncio.create_task(
+            self.async_write(fields, tags, timestamp)
+        )
 
     @staticmethod
     def _format(dict_data: dict) -> str:
