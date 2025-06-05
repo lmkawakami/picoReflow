@@ -68,28 +68,27 @@
             <h2>KP:</h2>
             <p>Current value: <span id="KP-spam"></span></p>
             <input type="number" id="kp" value="0.0" step="0.01">
-            <button>Set KP</button>
+            <button onclick="setCoefficient('kp')">Set KP</button>
         </span>
         <span class="coefficient-span">
             <h2>KI:</h2>
             <p>Current value: <span id="KI-spam"></span></p>
             <input type="number" id="ki" value="0.0" step="0.01">
-            <button>Set KI</button>
+            <button onclick="setCoefficient('ki')">Set KI</button>
         </span>
         <span class="coefficient-span">
             <h2>KD:</h2>
             <p>Current value: <span id="KD-spam"></span></p>
             <input type="number" id="kd" value="0.0" step="0.01">
-            <button>Set KD</button>
+            <button onclick="setCoefficient('kd')">Set KD</button>
         </span>
     </div>
     <!-- Visual alert element -->
     <div id="alert">Error: Unable to fetch parameters from the server.</div>
 
     <script>
-        // This function runs when the DOM is ready.
+        // Fetch current parameter values on page load.
         document.addEventListener('DOMContentLoaded', function() {
-            // Make a GET request to /parameters to fetch the current PID values.
             fetch('/parameters')
                 .then(function(response) {
                     if (!response.ok) {
@@ -115,6 +114,41 @@
                     alertEl.textContent = "Error fetching parameters: " + error.message;
                 });
         });
+        
+        // Callback function for setting a coefficient.
+        function setCoefficient(coefficient) {
+        // Get the input element by its id (e.g., "kp", "ki", or "kd").
+            var inputEl = document.getElementById(coefficient);
+            var value = inputEl.value;
+            
+        // Build the endpoint URL, e.g., "/set_kp".
+            var url = '/set_' + coefficient;
+            
+        // Send a POST request with a JSON body containing the value.
+            fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ value: value })
+            })
+            .then(function(response) {
+            if (!response.ok) {
+                throw new Error('Failed to set ' + coefficient);
+            }
+            return response.text(); // or response.json() based on your API response.
+            })
+            .then(function(data) {
+            console.log('Successfully set ' + coefficient + ':', data);
+            })
+            .catch(function(error) {
+            console.error('Error setting ' + coefficient + ':', error);
+            // Optionally, display the error in the alert element.
+            var alertEl = document.getElementById('alert');
+            alertEl.style.display = 'block';
+            alertEl.textContent = "Error setting " + coefficient + ": " + error.message;
+        });
+    }
     </script>
 </body>
 </html>
