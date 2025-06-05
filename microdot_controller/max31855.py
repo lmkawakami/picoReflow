@@ -195,7 +195,6 @@ class Thermocouple:
         COMPENSATED_TEMPERATURE = 0
         for n, c in enumerate(DCOEF):
             COMPENSATED_TEMPERATURE += c * math.pow(VTOTAL, n)
-        print(f"    compensated temperature: {COMPENSATED_TEMPERATURE}°C")
         return CompensatedTemperatures(
             COMPENSATED_TEMPERATURE,
             raw_temperature,

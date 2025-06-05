@@ -12,6 +12,9 @@ import logging
 #
 #   General options
 
+
+kiln_name = "mockup_kiln"
+
 ### Logging
 log_level = logging.DEBUG
 # log_format = '%(asctime)s %(levelname)s %(name)s: %(message)s'
@@ -75,9 +78,9 @@ sensor_time_wait = 1
 # pid_kp = 0.005  # Proportional
 
 
-pid_ki = 0  # Integration
-pid_kd = 0  # Derivative
-pid_kp = 1  # Proportional
+pid_ki = 0.01  # Integration
+pid_kd = 5  # Derivative
+pid_kp = 0.2  # Proportional
 
 
 ########################################################################
@@ -102,7 +105,9 @@ temp_scale          = "c" # c = Celsius | f = Fahrenheit - Unit to display
 time_scale_slope    = "s" # s = Seconds | m = Minutes | h = Hours - Slope displayed in temp_scale per time_scale_slope
 time_scale_profile  = "s" # s = Seconds | m = Minutes | h = Hours - Enter and view target time in time_scale_profile
 
-# InfluxDB proxy configuration
+########################################################################
+#
+#    InfluxDB proxy configuration
 influxdb_base_url = "http://192.168.0.3:8086"
 influxdb_api_token = "ifJmQfGoF0eaVQQCFNk7BnmUqtiSC1n4Q7YuGlggIvJiLW9cKBh0zMVw5v9NmAR0Dx1haQYVSbTYa5bOfj01Qg=="
 influxdb_organization = "danko"
