@@ -102,17 +102,6 @@ async def control(request, ws):
                     profile = Profile(profile_json)
                 oven.run_profile(profile)
                 ovenWatcher.record(profile)
-            elif msgdict.get("cmd") == "SIMULATE":
-                log.info("SIMULATE command received")
-                profile_obj = msgdict.get('profile')
-                if profile_obj:
-                    profile_json = json.dumps(profile_obj)
-                    profile = Profile(profile_json)
-                simulated_oven = Oven(simulate=True, time_step=0.05)
-                simulation_watcher = OvenWatcher(simulated_oven)
-                simulation_watcher.add_observer(ws)
-                #simulated_oven.run_profile(profile)
-                #simulation_watcher.record(profile)
             elif msgdict.get("cmd") == "STOP":
                 log.info("Stop command received")
                 oven.abort_run()
@@ -239,17 +228,3 @@ def main():
 log.debug("Stating main function...")
 main()
 log.debug
-# if __name__ == '__main__':
-#     print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
-#     main()
-
-# import asyncio
-# from oven import Oven
-
-# async def main():
-#     oven = Oven(simulate=True)  # or False if using real sensors
-#     # The oven tasks are running in the background.
-#     while True:
-#         await asyncio.sleep(1)
-
-# asyncio.run(main())
