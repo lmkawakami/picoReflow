@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        html {
+            zoom: 150%;
+        }
+        body {
+            font-family: monospace;
+            background-color: #302e2e;
+            color: #fafafa;
+            padding: 20px;
+            text-align: center;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #b9b9b9;
+            color: rgb(0, 0, 0);
+            font-weight: bold;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            display: block;
+            margin: 15px auto 20px; /* 10px on top and bottom */
+        }
+        button:hover {
+            background-color: #cacaca;
+        }
+        input[type="number"] {
+            display: block;
+            margin: 0 auto;
+            width: 50%;
+            height: 2em;
+            text-align: center;  /* center the text inside the input */
+        }
+        .coefficient-span {
+            display: inline-block;
+            vertical-align: top;
+            margin: 10px;
+            padding: 10px;
+            border: 1px solid #fafafa;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Configure Kiln PID parameters</h1>
+    <div>
+        <span class="coefficient-span">
+            <h2>KP:</h2>
+            <p>Current value: <span id="KP-spam"></span></p>
+            <input type="number" id="kp" value="0.0" step="0.01">
+            <button>Set KP</button>
+        </span>
+        <span class="coefficient-span">
+            <h2>KI:</h2>
+            <p>Current value: <span id="KI-spam"></span></p>
+            <input type="number" id="ki" value="0.0" step="0.01">
+            <button>Set KI</button>
+        </span>
+        <span class="coefficient-span">
+            <h2>KD:</h2>
+            <p>Current value: <span id="KD-spam"></span></p>
+            <input type="number" id="kd" value="0.0" step="0.01">
+            <button>Set KD</button>
+        </span>
+    </div>
+</body>
+</html>
