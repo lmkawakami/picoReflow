@@ -110,8 +110,8 @@ sim_R_ho_air   = 0.05   # K/W  " with internal air circulation
 #   Time and Temperature parameters
 
 temp_scale          = "c" # c = Celsius | f = Fahrenheit - Unit to display 
-time_scale_slope    = "s" # s = Seconds | m = Minutes | h = Hours - Slope displayed in temp_scale per time_scale_slope
-time_scale_profile  = "s" # s = Seconds | m = Minutes | h = Hours - Enter and view target time in time_scale_profile
+time_scale_slope    = "m" # s = Seconds | m = Minutes | h = Hours - Slope displayed in temp_scale per time_scale_slope
+time_scale_profile  = "m" # s = Seconds | m = Minutes | h = Hours - Enter and view target time in time_scale_profile
 
 ########################################################################
 #
