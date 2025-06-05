@@ -140,7 +140,7 @@ def _(con, create_hash, plt):
             if initial_temp is None:
                 initial_temp = ambient_temp
             self.table_name = "simulation_"+create_hash(f"{max_power}{ambient_temp}{heat_capacity}{heat_loss}{initial_temp}")
-        
+
             self.max_power = max_power           # W ~ J/s
             self.ambient_temp = ambient_temp     # °C
             self.heat_capacity = heat_capacity   # J/°C
@@ -149,7 +149,7 @@ def _(con, create_hash, plt):
             self.duty = initial_duty             # NA
             self.time = initial_time             # S
             self._create_table()
-        
+
             if init_real_data:
                 self._insert_data(initial_time, initial_temp, initial_duty, initial_temp)
             else:
@@ -167,13 +167,13 @@ def _(con, create_hash, plt):
                 absolute_error FLOAT
             )
             """)
-    
+
         def _insert_data(self, time, simulated_temperature, duty, real_temperature="NULL"):
             absolute_error = "NULL"
             if real_temperature != "NULL":
                 absolute_error = abs(simulated_temperature - real_temperature)
             con.execute(f"INSERT INTO {self.table_name} VALUES ({time}, {duty}, {simulated_temperature}, {real_temperature}, {absolute_error})")
-    
+
         def simulate(self, timestep, duty, real_temperature="NULL"):
             self.time += timestep
             self.duty = duty
@@ -191,32 +191,32 @@ def _(con, create_hash, plt):
         def plot_simulation(self, log_scale_temp=False, plot_real_temp=True):     
             fig, ax1 = plt.subplots(figsize=(13, 6))
             simulation_df = self.simulation_df
-        
+
             # Plot the simulated_temperature on the primary y-axis
             ax1.plot(simulation_df["time"], simulation_df["simulated_temperature"], color='b', label='Simulated Temperature')
             ax1.set_xlabel('Time')
             ax1.set_ylabel('Temperature', color='b')
             ax1.tick_params(axis='y', labelcolor='b')
-        
+
             # Set log scale for simulated_temperature if specified
             if log_scale_temp:
                 ax1.set_yscale('log')
-        
+
             # Create a secondary y-axis for duty
             ax2 = ax1.twinx()
             ax2.plot(simulation_df["time"], simulation_df["duty"], color='g', label='Duty')
             ax2.set_ylabel('Duty', color='g')
             ax2.tick_params(axis='y', labelcolor='g')
-        
+
             # Plot real_temperature if the flag is set to True
             if plot_real_temp:
                 ax1.plot(simulation_df["time"], simulation_df["real_temperature"], color='r', label='Real Temperature')
-    
+
             # Add title and legend
             plt.title('Simulated Temperature and Duty over Time')
             ax1.legend(loc='upper left')
             ax2.legend(loc='upper right')
-        
+
             return plt.gca()
 
 
@@ -235,7 +235,7 @@ def _(con, create_hash, plt):
 def _(kiln):
     for _ in range(10):
         kiln.simulate(120, 1, 30)
-    
+
     for _ in range(10):
         kiln.simulate(120, 0, 45)
 
@@ -258,11 +258,113 @@ def _(
     _df = mo.sql(
         f"""
         SELECT * FROM simulation_c8513ae419a2693824820cffafafb50f102800d2081141d2b88f946711d0449f ORDER BY ROWID DESC LIMIT 100
-
         """,
         engine=con
     )
     return
+
+
+@app.cell
+def _(SimulatedKiln, con, create_hash, plt):
+    class SecondOrderSimulatedKiln:
+        def __init__(self, max_power, ambient_temp, heat_capacity, heat_loss, initial_temp = None, initial_duty = 0, initial_time = 0, init_real_data=True, internal_conductivity=0.5):
+            if initial_temp is None:
+                initial_temp = ambient_temp
+            self.table_name = "simulation_"+create_hash(f"{max_power}{ambient_temp}{heat_capacity}{heat_loss}{initial_temp}")
+
+            self.max_power = max_power           # W ~ J/s
+            self.ambient_temp = ambient_temp     # °C
+            self.heat_capacity = heat_capacity   # J/°C
+            self.heat_loss = heat_loss           # W/°C
+            self.temp = initial_temp             # °C
+            self.duty = initial_duty             # NA
+            self.time = initial_time             # S
+            self._create_table()
+
+            self._tf1 = self.temp
+            self._tf2 = self.temp
+            self._cf1 = self.heat_capacity/2
+            self._cf2 = self.heat_capacity/2
+
+            if init_real_data:
+                self._insert_data(initial_time, initial_temp, initial_duty, initial_temp)
+            else:
+                self._insert_data(initial_time, initial_temp, initial_duty)
+
+        def _create_table(self):
+            # Criar a tabela "kiln_data"
+            con.execute(f"DROP TABLE IF EXISTS {self.table_name}")
+            con.execute(f"""
+            CREATE TABLE {self.table_name} (
+                time FLOAT,
+                duty FLOAT,
+                simulated_temperature FLOAT,
+                real_temperature FLOAT,
+                absolute_error FLOAT
+            )
+            """)
+
+        def _insert_data(self, time, simulated_temperature, duty, real_temperature="NULL"):
+            absolute_error = "NULL"
+            if real_temperature != "NULL":
+                absolute_error = abs(simulated_temperature - real_temperature)
+            con.execute(f"INSERT INTO {self.table_name} VALUES ({time}, {duty}, {simulated_temperature}, {real_temperature}, {absolute_error})")
+
+        def simulate(self, timestep, duty, real_temperature="NULL"):
+            self.time += timestep
+            self.duty = duty
+            power_in = self.max_power * self.duty
+            power_loss = self.heat_loss * (self.temp - self.ambient_temp)
+            power = power_in - power_loss
+            delta_temp = power * timestep / self.heat_capacity
+            self.temp += delta_temp
+            self._insert_data(self.time, self.temp, self.duty, real_temperature)
+
+        @property
+        def simulation_df(self):
+            return con.sql(f"SELECT * FROM {self.table_name}").df()
+
+        def plot_simulation(self, log_scale_temp=False, plot_real_temp=True):     
+            fig, ax1 = plt.subplots(figsize=(13, 6))
+            simulation_df = self.simulation_df
+
+            # Plot the simulated_temperature on the primary y-axis
+            ax1.plot(simulation_df["time"], simulation_df["simulated_temperature"], color='b', label='Simulated Temperature')
+            ax1.set_xlabel('Time')
+            ax1.set_ylabel('Temperature', color='b')
+            ax1.tick_params(axis='y', labelcolor='b')
+
+            # Set log scale for simulated_temperature if specified
+            if log_scale_temp:
+                ax1.set_yscale('log')
+
+            # Create a secondary y-axis for duty
+            ax2 = ax1.twinx()
+            ax2.plot(simulation_df["time"], simulation_df["duty"], color='g', label='Duty')
+            ax2.set_ylabel('Duty', color='g')
+            ax2.tick_params(axis='y', labelcolor='g')
+
+            # Plot real_temperature if the flag is set to True
+            if plot_real_temp:
+                ax1.plot(simulation_df["time"], simulation_df["real_temperature"], color='r', label='Real Temperature')
+
+            # Add title and legend
+            plt.title('Simulated Temperature and Duty over Time')
+            ax1.legend(loc='upper left')
+            ax2.legend(loc='upper right')
+
+            return plt.gca()
+
+
+    kiln = SimulatedKiln(
+        max_power=2000,
+        ambient_temp=20,
+        heat_capacity=30000,
+        heat_loss=2,
+    )
+
+    kiln.simulation_df
+    return (kiln,)
 
 
 @app.cell(column=3)
@@ -270,7 +372,7 @@ def _(SimulatedKiln, firing_data_df):
     def simulate_and_compare(firing_data_df):
         firing_data_gen = firing_data_iterator(firing_data_df)
         (_, initial_duty, initial_temp), firing_data_gen = remove_first(firing_data_gen)
-    
+
         # simulated_kiln = SimulatedKiln(
         #     max_power=4000,
         #     ambient_temp=20,
