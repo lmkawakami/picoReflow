@@ -12,7 +12,6 @@ from wifi_utils import connect_to_wifi
 from machine import Pin
 from microdot import Microdot, send_file, redirect
 from microdot.websocket import with_websocket, WebSocketError
-from microdot.cors import CORS
 import time
 import json
 import ntptime
@@ -37,7 +36,6 @@ LED = Pin(15, Pin.OUT)    # create output pin on GPIO0
 
 
 app = Microdot()
-CORS(app, allowed_origins=['*', 'http://192.168.0.3:3000'], allow_credentials=True)
 oven = Oven()
 ovenWatcher = OvenWatcher(oven)
 influxDB = InfluxDB()
